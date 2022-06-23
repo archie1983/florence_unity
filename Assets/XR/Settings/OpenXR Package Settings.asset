@@ -40,7 +40,7 @@ MonoBehaviour:
   company: HTC
   priority: 0
   required: 0
-  m_space: 0
+  m_space: 1470271392240
   m_leftHandle: 0
   m_rightHandle: 0
 --- !u!114 &-8260061965551243422
@@ -241,7 +241,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 056125dd64c0ed540b40a4af74f7b495, type: 3}
   m_Name: RuntimeDebuggerOpenXRFeature Standalone
   m_EditorClassIdentifier: 
-  m_enabled: 0
+  m_enabled: 1
   nameUi: Runtime Debugger
   version: 1
   featureIdInternal: com.unity.openxr.features.runtimedebugger
