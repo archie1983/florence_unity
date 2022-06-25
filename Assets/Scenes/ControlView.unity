@@ -406,7 +406,7 @@ PrefabInstance:
   m_SourcePrefab: {fileID: 100100000, guid: d27351b2c1d2dbf449e840caa23c5122, type: 3}
 --- !u!1 &672445403 stripped
 GameObject:
-  m_CorrespondingSourceObject: {fileID: 1105762654149240, guid: d27351b2c1d2dbf449e840caa23c5122, type: 3}
+  m_CorrespondingSourceObject: {fileID: 1635191325197278, guid: d27351b2c1d2dbf449e840caa23c5122, type: 3}
   m_PrefabInstance: {fileID: 672445402}
   m_PrefabAsset: {fileID: 0}
 --- !u!114 &672445404
@@ -426,7 +426,7 @@ MonoBehaviour:
   linkColor: {r: 1, g: 1, b: 1, a: 1}
   showGestureColor: 0
   showConficenceAsAlpha: 1
-  material: {fileID: 0}
+  material: {fileID: 2100000, guid: 06bb3fc3c099dbd44b04c98cbe43ace2, type: 2}
   colliderType: 0
 --- !u!1 &705507993
 GameObject:
@@ -809,7 +809,7 @@ PrefabInstance:
   m_SourcePrefab: {fileID: 100100000, guid: 1b79fd35f4ae8094380d6aef1dece8bb, type: 3}
 --- !u!1 &1380777394 stripped
 GameObject:
-  m_CorrespondingSourceObject: {fileID: 1834209869299176, guid: 1b79fd35f4ae8094380d6aef1dece8bb, type: 3}
+  m_CorrespondingSourceObject: {fileID: 1308173863509694, guid: 1b79fd35f4ae8094380d6aef1dece8bb, type: 3}
   m_PrefabInstance: {fileID: 1380777393}
   m_PrefabAsset: {fileID: 0}
 --- !u!114 &1380777395
@@ -829,7 +829,7 @@ MonoBehaviour:
   linkColor: {r: 1, g: 1, b: 1, a: 1}
   showGestureColor: 0
   showConficenceAsAlpha: 1
-  material: {fileID: 0}
+  material: {fileID: 2100000, guid: 06bb3fc3c099dbd44b04c98cbe43ace2, type: 2}
   colliderType: 0
 --- !u!1 &1534708488
 GameObject:
