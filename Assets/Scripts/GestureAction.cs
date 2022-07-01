@@ -6,6 +6,7 @@ using ViveHandTracking;
 //# Needed to send Twist messages
 using Unity.Robotics.ROSTCPConnector;
 using Twist = RosMessageTypes.Geometry.TwistMsg;
+using Float32 = RosMessageTypes.Std.Float32Msg;
 
 //# Needed for threading
 using System;
@@ -26,15 +27,18 @@ public class GestureAction : MonoBehaviour
     private float userDraggedDistance = 0.0f; //# When user want to rotate, we will store here by how much
     public ROSConnection ros;
     private Twist rotation = new Twist();
+    private Float32 rotation_x = new Float32();
 
     //private bool exit = true;
     private String cmd_vel_topic = "cmd_vel";
+    private String rotation_cntrl_topic = "/base_cntrl/rotate_x"; //# rotation conrol topic
 
     // Start is called before the first frame update
     void Start()
     {
         ros = ROSConnection.GetOrCreateInstance();
         ros.RegisterPublisher<Twist>(cmd_vel_topic);
+        ros.RegisterPublisher<Float32>(rotation_cntrl_topic);
     }
 
     // Update is called once per frame
@@ -73,10 +77,14 @@ public class GestureAction : MonoBehaviour
                 rotation.angular.z = -0.5; //# we will be rotating on Z axis at a modest speed for a duration that we'll figure out from the draged amount by user.
             }
 
-            ros.Publish(cmd_vel_topic, rotation);
+            rotation_x.data = userDraggedDistance;
+            ros.Publish(rotation_cntrl_topic, rotation_x);
+            state = HandActionState.IDLE; //# Finally let's get ready for new actions
+
+            //ros.Publish(cmd_vel_topic, rotation);
 
             //# Now that we've sent off the rotation, we need to stop it after a little while -- dependent on how much the user dragged
-            new Thread(this.stopRobotMotionAfterTime).Start(Convert.ToInt32(Math.Abs(userDraggedDistance * 1000)));
+            //new Thread(this.stopRobotMotionAfterTime).Start(Convert.ToInt32(Math.Abs(userDraggedDistance * 1000)));
         }
     }
 
