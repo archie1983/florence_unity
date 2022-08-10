@@ -47,6 +47,8 @@ public class GestureAction : MonoBehaviour
 
     //private bool exit = true;
     private String cmd_vel_topic = "cmd_vel";
+    private String cont_drv_topic = "base_cntrl/continuous"; //# Continuous drive topic
+    
     private String rotation_cntrl_topic = "/base_cntrl/rotate_x"; //# rotation conrol topic
     private String crawl_cntrl_topic = "/base_cntrl/crawl_x"; //# crawl conrol topic
 
@@ -59,6 +61,7 @@ public class GestureAction : MonoBehaviour
     {
         ros = ROSConnection.GetOrCreateInstance();
         ros.RegisterPublisher<Twist>(cmd_vel_topic);
+        ros.RegisterPublisher<Twist>(cont_drv_topic);
         ros.RegisterPublisher<Float32>(rotation_cntrl_topic);
         ros.RegisterPublisher<Float32>(crawl_cntrl_topic);
     }
@@ -110,7 +113,7 @@ public class GestureAction : MonoBehaviour
 
             UnityEngine.Debug.Log("CMove: " + continuous_move.linear.x + " " + continuous_move.angular.z);
 
-            ros.Publish(cmd_vel_topic, continuous_move);
+            ros.Publish(cont_drv_topic, continuous_move);
 
             //# Now that we've sent off the rotation, we need to stop it after a little while -- dependent on how much the user dragged
             //new Thread(this.stopRobotMotionAfterTime).Start(Convert.ToInt32(Math.Abs(userDraggedSidewaysDistance * 1000)));
