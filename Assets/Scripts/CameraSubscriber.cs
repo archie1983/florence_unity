@@ -36,7 +36,7 @@ public class CameraSubscriber : MonoBehaviour
         isMessageReceived = true;
         //Debug.Log(ImgMsg.format);
         //Debug.Log(ImgMsg.encoding);
-        Debug.Log(imageData.Length);
+        //Debug.Log(imageData.Length);
 
         //# Debug 1st 10 bytes of the received image
         // string byteText = "";
