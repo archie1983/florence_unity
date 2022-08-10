@@ -12,6 +12,8 @@ public class CameraSubscriber : MonoBehaviour
     public RawImage rimg;
     private byte[] imageData;
     private bool isMessageReceived;
+
+    // This is set from Unity Editor, but it should be "sim_camera1/image_raw/compressed" for Gazebo simulation images and /camera1 for USB camera images
     public string topicName = "";
 
     // Start is called before the first frame update
@@ -34,7 +36,7 @@ public class CameraSubscriber : MonoBehaviour
         isMessageReceived = true;
         //Debug.Log(ImgMsg.format);
         //Debug.Log(ImgMsg.encoding);
-        //Debug.Log(imageData.Length);
+        Debug.Log(imageData.Length);
 
         //# Debug 1st 10 bytes of the received image
         // string byteText = "";

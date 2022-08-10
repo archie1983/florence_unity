@@ -24,14 +24,16 @@ public class GestureAction : MonoBehaviour
 
     private HandActionState state = HandActionState.IDLE;
     private Vector3 fistStartPos, fistEndPos;
-    private float userDraggedDistance = 0.0f; //# When user want to rotate, we will store here by how much
+    private float userDraggedDistance = 0.0f, userDiveDistance = 0.0f; //# When user want to rotate, we will store here by how much
     public ROSConnection ros;
     private Twist rotation = new Twist();
     private Float32 rotation_x = new Float32();
+    private Float32 diving_x = new Float32();
 
     //private bool exit = true;
     private String cmd_vel_topic = "cmd_vel";
     private String rotation_cntrl_topic = "/base_cntrl/rotate_x"; //# rotation conrol topic
+    private String crawl_cntrl_topic = "/base_cntrl/crawl_x"; //# crawl conrol topic
 
     // Start is called before the first frame update
     void Start()
@@ -39,11 +41,13 @@ public class GestureAction : MonoBehaviour
         ros = ROSConnection.GetOrCreateInstance();
         ros.RegisterPublisher<Twist>(cmd_vel_topic);
         ros.RegisterPublisher<Float32>(rotation_cntrl_topic);
+        ros.RegisterPublisher<Float32>(crawl_cntrl_topic);
     }
 
     // Update is called once per frame
     void Update()
     {
+        //# AE: First let's examine if we want to rotate
         if (GestureProvider.LeftHand != null && GestureProvider.LeftHand.gesture == GestureType.Fist && state == HandActionState.IDLE)
         {
             state = HandActionState.ACTION_DETECTED;
@@ -79,6 +83,35 @@ public class GestureAction : MonoBehaviour
 
             rotation_x.data = userDraggedDistance;
             ros.Publish(rotation_cntrl_topic, rotation_x);
+            state = HandActionState.IDLE; //# Finally let's get ready for new actions
+
+            //ros.Publish(cmd_vel_topic, rotation);
+
+            //# Now that we've sent off the rotation, we need to stop it after a little while -- dependent on how much the user dragged
+            //new Thread(this.stopRobotMotionAfterTime).Start(Convert.ToInt32(Math.Abs(userDraggedDistance * 1000)));
+        }
+
+        //# AE: now for the crawl part
+        if (GestureProvider.RightHand != null && GestureProvider.RightHand.gesture == GestureType.Victory && state == HandActionState.IDLE)
+        {
+            state = HandActionState.ACTION_DETECTED;
+            fistStartPos = GestureProvider.RightHand.position;
+            /*
+            txtCoord.text = string.Format("{0:0.##}", GestureProvider.LeftHand.position.x * SCALE)
+                + " # " + string.Format("{0:0.##}", GestureProvider.LeftHand.position.y * SCALE)
+                + " # " + string.Format("{0:0.##}", GestureProvider.LeftHand.position.z * SCALE)
+                + "\n" + GestureProvider.LeftHand.rotation.ToString();
+            */
+        }
+        else if (GestureProvider.RightHand != null && GestureProvider.RightHand.gesture != GestureType.Victory && state == HandActionState.ACTION_DETECTED)
+        {
+            state = HandActionState.ACTION_IN_PROGRESS;
+            fistEndPos = GestureProvider.RightHand.position;
+            UnityEngine.Debug.Log("Dive: " + (fistStartPos.y - fistEndPos.y));
+            userDiveDistance = fistStartPos.y - fistEndPos.y;
+
+            diving_x.data = userDiveDistance;
+            ros.Publish(crawl_cntrl_topic, diving_x);
             state = HandActionState.IDLE; //# Finally let's get ready for new actions
 
             //ros.Publish(cmd_vel_topic, rotation);
