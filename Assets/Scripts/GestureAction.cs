@@ -33,11 +33,13 @@ public class GestureAction : MonoBehaviour
     {
         NONE,
         DISCRETE,
-        CONTINUOUS
+        CONTINUOUS,
+        CONTINUOUS_PERSISTENT
     };
 
     private HandActionState state = HandActionState.IDLE;
-    private OperationStyle oper_style = OperationStyle.CONTINUOUS;
+    private OperationStyle oper_style = OperationStyle.CONTINUOUS_PERSISTENT;
+
     private Vector3 fistStartPos, fistEndPos;
     private float userDraggedSidewaysDistance = 0.0f, userDraggedForwardDistance = 0.0f; //# When user want to rotate, we will store here by how much
     public ROSConnection ros;
@@ -56,6 +58,19 @@ public class GestureAction : MonoBehaviour
     private GestureType crawl_gesture = GestureType.Victory;
     private GestureType rotation_gesture = GestureType.Fist;
 
+    // Gesture type for crawling and rotating in a continuous fashion. We only need one here.
+    private GestureType continuous_action_gesture = GestureType.Victory;
+
+    // Gesture types to stop continuous action. We still need to remove the continuous_action_gesture from this collection at the start of the app.
+    private List<GestureType> continuous_action_stop_gestures = new List<GestureType> { 
+        GestureType.Fist,
+        GestureType.Five,
+        GestureType.Like,
+        GestureType.OK,
+        GestureType.Point,
+//        GestureType.Unknown, //# don't want unknown gesture to interrupt the action
+        GestureType.Victory };
+
     // Start is called before the first frame update
     void Start()
     {
@@ -64,6 +79,9 @@ public class GestureAction : MonoBehaviour
         ros.RegisterPublisher<Twist>(cont_drv_topic);
         ros.RegisterPublisher<Float32>(rotation_cntrl_topic);
         ros.RegisterPublisher<Float32>(crawl_cntrl_topic);
+
+        // Remove the continuous_action_gesture from the collection that stops the action.
+        continuous_action_stop_gestures.Remove(continuous_action_gesture);
     }
 
     // Update is called once per frame
@@ -77,6 +95,10 @@ public class GestureAction : MonoBehaviour
         {
             evaluateGestureForContinuousOperation();
         }
+        else if (oper_style == OperationStyle.CONTINUOUS_PERSISTENT)
+        {
+            evaluateGestureForContinuousPersistentOperation();
+        }
     }
 
     /**
@@ -85,14 +107,14 @@ public class GestureAction : MonoBehaviour
      */
     private void evaluateGestureForContinuousOperation()
     {
-        //# AE: First let's examine if we want to rotate
-        if (GestureProvider.LeftHand != null && GestureProvider.LeftHand.gesture == rotation_gesture && state == HandActionState.IDLE)
+        //# AE: First let's examine if we want to start an action
+        if (GestureProvider.LeftHand != null && GestureProvider.LeftHand.gesture == continuous_action_gesture && state == HandActionState.IDLE)
         {
             //# Remember that we've started rotation and where we started
             state = HandActionState.ACTION_DETECTED;
             fistStartPos = GestureProvider.LeftHand.position;
         }
-        else if (GestureProvider.LeftHand != null && GestureProvider.LeftHand.gesture == rotation_gesture && (state == HandActionState.ACTION_DETECTED || state == HandActionState.ACTION_IN_PROGRESS))
+        else if (GestureProvider.LeftHand != null && GestureProvider.LeftHand.gesture == continuous_action_gesture && (state == HandActionState.ACTION_DETECTED || state == HandActionState.ACTION_IN_PROGRESS))
         {
             //# Now send speed updates according to the offset
             state = HandActionState.ACTION_IN_PROGRESS;
@@ -118,11 +140,63 @@ public class GestureAction : MonoBehaviour
             //# Now that we've sent off the rotation, we need to stop it after a little while -- dependent on how much the user dragged
             //new Thread(this.stopRobotMotionAfterTime).Start(Convert.ToInt32(Math.Abs(userDraggedSidewaysDistance * 1000)));
         }
-        else if (GestureProvider.LeftHand == null || (GestureProvider.LeftHand != null && GestureProvider.LeftHand.gesture != rotation_gesture))
+        else if (GestureProvider.LeftHand == null || (GestureProvider.LeftHand != null && GestureProvider.LeftHand.gesture != continuous_action_gesture))
         {
             //# Now end the process
             ros.Publish(cmd_vel_topic, new Twist()); //# tell robot to stop
             state = HandActionState.IDLE;
+        }
+    }
+
+    /**
+     * This function allows for continuous persistent operation- e.g. gesture detected and offset is continuously calculated from the detected place. Offset then sets the speed of the movement. This continues
+     * until the hand is released. The difference between this and evaluateGestureForContinuousOperation(), which is not persistent, is that here we don't stop the movement once the hand detection
+     * algorithm has decided that our gesture is finished. Very often with gestures (e.g. the fist) user is still continuing to display the previous gesture (e.g. the fist), but the algorithm detects
+     * that one finger is elsewhere (a fist with raised pinky for example even though the pinky is actually not raised in the real reality) and our action stops. This one will only stop once the hand
+     * disappears altogether or it is a positively different gesture.
+     */
+    private void evaluateGestureForContinuousPersistentOperation()
+    {
+        // First decide if we want to start, stop or continue an action
+        if (GestureProvider.LeftHand == null || (GestureProvider.LeftHand != null && continuous_action_stop_gestures.Contains(GestureProvider.LeftHand.gesture)))
+        {
+            //# Now end the process if it is happening
+            if (state != HandActionState.IDLE)
+            {
+                ros.Publish(cmd_vel_topic, new Twist()); //# tell robot to stop
+            }
+
+            state = HandActionState.IDLE;
+        } else if(GestureProvider.LeftHand.gesture == continuous_action_gesture && state == HandActionState.IDLE)
+        {
+            //# Remember that we've started rotation and where we started
+            state = HandActionState.ACTION_DETECTED;
+            fistStartPos = GestureProvider.LeftHand.position;
+        } else if (state == HandActionState.ACTION_DETECTED || state == HandActionState.ACTION_IN_PROGRESS)
+        {
+            //# Now send speed updates according to the offset
+            state = HandActionState.ACTION_IN_PROGRESS;
+            fistEndPos = GestureProvider.LeftHand.position;
+
+            //# y - hand up down
+            //# z - hand left right
+            //# x - hand forward back
+            userDraggedSidewaysDistance = fistStartPos.z - fistEndPos.z;
+            userDraggedForwardDistance = fistStartPos.x - fistEndPos.x;
+
+            //# Ok, so now we have a user's command to move the robot. We also have an indication by how much we want to move it.
+            //# We can now issue a Twist command, which is essentially the offsets detected.
+            continuous_move.linear.x = userDraggedForwardDistance * -2.0; //# make negative because we're driving it back to front.
+            continuous_move.linear.y = 0;
+            continuous_move.linear.z = 0;
+
+            continuous_move.angular.x = 0;
+            continuous_move.angular.y = 0;
+            continuous_move.angular.z = userDraggedSidewaysDistance * -2.0; //# we will be rotating on Z axis at the speed requested by user. make negative because we're driving it back to front.
+
+            UnityEngine.Debug.Log("CMove: " + continuous_move.linear.x + " " + continuous_move.angular.z);
+
+            ros.Publish(cont_drv_topic, continuous_move);
         }
     }
 
