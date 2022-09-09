@@ -37,12 +37,14 @@ public class GestureAction : MonoBehaviour
         CONTINUOUS_PERSISTENT
     };
 
+    public ROSConnection ros;
+
     private HandActionState state = HandActionState.IDLE;
     private OperationStyle oper_style = OperationStyle.CONTINUOUS_PERSISTENT;
 
     private Vector3 fistStartPos, fistEndPos;
     private float userDraggedSidewaysDistance = 0.0f, userDraggedForwardDistance = 0.0f; //# When user want to rotate, we will store here by how much
-    public ROSConnection ros;
+
     private Twist continuous_move = new Twist();
     private Float32 rotation_x = new Float32();
     private Float32 diving_x = new Float32();
@@ -87,6 +89,7 @@ public class GestureAction : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        /*
         if (oper_style == OperationStyle.DISCRETE)
         {
             evaluateGestureForDiscreteOperation();
@@ -99,6 +102,7 @@ public class GestureAction : MonoBehaviour
         {
             evaluateGestureForContinuousPersistentOperation();
         }
+        */
     }
 
     /**
@@ -305,6 +309,24 @@ public class GestureAction : MonoBehaviour
     public void OnStateChanged(int state)
     {
         UnityEngine.Debug.Log("OK detected");
+        /*        if (GestureProvider.LeftHand != null && GestureProvider.LeftHand.gesture == GestureType.Like)
+                {
+                    txtCoord.text = GestureProvider.LeftHand.position.x + " # " + GestureProvider.LeftHand.position.y + " # " + GestureProvider.LeftHand.position.z;
+                }*/
+    }
+
+    public void OnTargetDetected()
+    {
+        UnityEngine.Debug.Log("TARGET detected");
+        /*        if (GestureProvider.LeftHand != null && GestureProvider.LeftHand.gesture == GestureType.Like)
+                {
+                    txtCoord.text = GestureProvider.LeftHand.position.x + " # " + GestureProvider.LeftHand.position.y + " # " + GestureProvider.LeftHand.position.z;
+                }*/
+    }
+
+    public void OnTargetReleased()
+    {
+        UnityEngine.Debug.Log("TARGET RELEASED");
         /*        if (GestureProvider.LeftHand != null && GestureProvider.LeftHand.gesture == GestureType.Like)
                 {
                     txtCoord.text = GestureProvider.LeftHand.position.x + " # " + GestureProvider.LeftHand.position.y + " # " + GestureProvider.LeftHand.position.z;

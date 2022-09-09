@@ -457,23 +457,64 @@ MonoBehaviour:
     LeftHandMissing: 1
     RightHandMissing: 0
   PrepareCondition:
-    Left: 8447
+    Left: 8
     Right: 8447
-    MinMatchFrames: 4
+    MinMatchFrames: 20
     MaxMissingFrames: 20
   TriggerCondition:
     Left: 8
     Right: 8447
-    MinMatchFrames: 4
+    MinMatchFrames: 20
     MaxMissingFrames: 20
-  CanSkipPrepare: 1
+  CanSkipPrepare: 0
   OnStateChanged:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 672445405}
         m_TargetAssemblyTypeName: GestureAction, Assembly-CSharp
-        m_MethodName: OnStateChanged
-        m_Mode: 0
+        m_MethodName: OnTargetDetected
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+--- !u!114 &672445409
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 672445403}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 413cce0f7322efc42942affc8173e533, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ResetCondition:
+    LeftHandMissing: 1
+    RightHandMissing: 0
+  PrepareCondition:
+    Left: 8439
+    Right: 8447
+    MinMatchFrames: 20
+    MaxMissingFrames: 20
+  TriggerCondition:
+    Left: 8439
+    Right: 8447
+    MinMatchFrames: 20
+    MaxMissingFrames: 20
+  CanSkipPrepare: 0
+  OnStateChanged:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 672445405}
+        m_TargetAssemblyTypeName: GestureAction, Assembly-CSharp
+        m_MethodName: OnTargetReleased
+        m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -963,6 +1004,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ros: {fileID: 0}
+  mainCamera: {fileID: 963194227}
   rimg: {fileID: 491562593}
   topicName: camera1
 --- !u!4 &1534708490
