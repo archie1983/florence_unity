@@ -12,6 +12,8 @@ using Float32 = RosMessageTypes.Std.Float32Msg;
 using System;
 using System.Diagnostics;
 using System.Threading;
+using System.IO;
+using System.Collections;
 
 public class GestureAction : MonoBehaviour
 {
@@ -63,6 +65,8 @@ public class GestureAction : MonoBehaviour
     // Gesture type for crawling and rotating in a continuous fashion. We only need one here.
     private GestureType continuous_action_gesture = GestureType.Victory;
 
+    private GestureType action_gesture_to_test = GestureType.Victory;
+
     // Gesture types to stop continuous action. We still need to remove the continuous_action_gesture from this collection at the start of the app.
     private List<GestureType> continuous_action_stop_gestures = new List<GestureType> { 
         GestureType.Fist,
@@ -72,6 +76,11 @@ public class GestureAction : MonoBehaviour
         GestureType.Point,
 //        GestureType.Unknown, //# don't want unknown gesture to interrupt the action
         GestureType.Victory };
+
+    private StreamWriter file = null;
+    private String fileName = "";
+    private int start_stop_counter = 0;
+    private ArrayList gesture_confidences = null;
 
     // Start is called before the first frame update
     void Start()
@@ -84,6 +93,13 @@ public class GestureAction : MonoBehaviour
 
         // Remove the continuous_action_gesture from the collection that stops the action.
         continuous_action_stop_gestures.Remove(continuous_action_gesture);
+
+        startNewDetectionAnalysis();
+
+        using (file = new(fileName))
+        {
+            file.WriteLine(start_stop_counter + ":");
+        }
     }
 
     // Update is called once per frame
@@ -103,6 +119,146 @@ public class GestureAction : MonoBehaviour
             evaluateGestureForContinuousPersistentOperation();
         }
         */
+        logGestureReliability();
+    }
+
+    private void FixedUpdate()
+    {
+        //UnityEngine.Debug.Log("NULLGEST: " + (GestureProvider.LeftHand == null ? "NULL" : GestureProvider.LeftHand.gesture.ToString() + " " + GestureProvider.LeftHand.confidence));
+    }
+
+    private void logGestureReliability()
+    {
+        
+        //# AE: First let's examine if we want to start an action
+        if (GestureProvider.LeftHand != null && GestureProvider.LeftHand.gesture == action_gesture_to_test && state == HandActionState.IDLE)
+        {
+            //# Remember that we've started rotation and where we started
+            state = HandActionState.ACTION_DETECTED;
+            UnityEngine.Debug.Log("ACTION DETECTED");
+            watchDog(DEFAULT_WATCHDOG_BITE_TIME);
+            start_stop_counter++;
+
+            using (file = new(fileName))
+            {
+                file.WriteLine(start_stop_counter + ":");
+            }
+            gesture_confidences.Add(GestureProvider.LeftHand.confidence);
+        }
+        /*
+         * Continuous hand detection
+         */
+        else if (GestureProvider.LeftHand != null && GestureProvider.LeftHand.gesture == action_gesture_to_test && state == HandActionState.ACTION_DETECTED)
+        {
+            gesture_confidences.Add(GestureProvider.LeftHand.confidence);
+            watchDog(DEFAULT_WATCHDOG_BITE_TIME);
+        }
+        /*
+         * End condition - only for detecting a different gesure. It doesn't work for "hand lost" event detection, because hand SDK doesn't run Update() of this 
+         * script when hand is not detected. This is actually handled in a watchdog thread.
+         */
+        else if (GestureProvider.LeftHand != null && state == HandActionState.ACTION_DETECTED && GestureProvider.LeftHand.gesture != action_gesture_to_test)
+        {
+            state = HandActionState.IDLE;
+            UnityEngine.Debug.Log("ACTION STOPPED");
+
+            using (file = new(fileName))
+            {
+                file.WriteLine(":" + start_stop_counter);
+            }
+
+            /*
+             * Still kick the dog, because hand hasn't disappeared. We want to catch this kind of situation and discuss it in paper.
+             */
+            watchDog(DEFAULT_WATCHDOG_BITE_TIME);
+            gesture_confidences.Add(-1.0f);
+        }
+        /*
+         * Hand still detected, but not the gesture we're looking for. Still kick the dog because required gesture might come back.
+         */
+        else if (GestureProvider.LeftHand != null && state == HandActionState.IDLE && GestureProvider.LeftHand.gesture != action_gesture_to_test)
+        {
+            watchDog(DEFAULT_WATCHDOG_BITE_TIME);
+            gesture_confidences.Add(-1.0f);
+        }
+
+    }
+
+    /**
+     * Time in ms after which the watchdog will bite if not kicked.
+     */
+    private int watchdog_bite_time = 0;
+    private static int DEFAULT_WATCHDOG_BITE_TIME = 200;
+    private Stopwatch watchdog_sw = null;
+    private Thread watchdog_thread = null;
+    /**
+     * Starts a new thread to monitor hand gesture work. If the hand SDK doesn't detect any more hands, then the dog will not be
+     * kicked and it will expire, setting the state to IDLE and notifying whatever needs notification.
+     */
+    private void watchDog(int expire_after_this_long)
+    {
+        watchdog_bite_time = expire_after_this_long;
+
+        if (watchdog_thread == null)
+        {
+            watchdog_thread = new Thread(this.watchdogExpiry);
+            watchdog_thread.Start();
+        }
+        else
+        {
+            watchdog_sw.Restart();
+        }
+    }
+
+    private void watchdogExpiry()
+    {
+        watchdog_sw = Stopwatch.StartNew();
+        do
+        {
+            //UnityEngine.Debug.Log("SLEEPE: " + watchdog_sw.ElapsedMilliseconds);
+            Thread.Sleep(25);
+        } while (watchdog_sw.ElapsedMilliseconds <= watchdog_bite_time);
+
+        /*
+         * Watchdog hasn't been kicked for a while, now it's going to bite- the action has been finished and hand gesture gone back to null.
+         */
+        watchdog_sw.Stop();
+        watchdog_thread = null;
+
+        state = HandActionState.IDLE;
+        UnityEngine.Debug.Log("ACTION EXPIRED");
+
+        using (file = new(fileName))
+        {
+            file.WriteLine(":" + start_stop_counter);
+            /*
+             * Also store all the confidences of the detected gesture
+             */
+            String confidences_string = "";
+            for (int cnt = 0; cnt < gesture_confidences.Count; cnt++)
+            {
+                try
+                {
+                    confidences_string += (float)gesture_confidences[cnt] + ",";
+                } catch(InvalidCastException exc)
+                {
+                    UnityEngine.Debug.Log("ICE: gesture_confidences[" + cnt + "] == " + gesture_confidences[cnt]);
+                }
+            }
+            file.WriteLine(confidences_string.Substring(0, confidences_string.Length - 1));
+        }
+
+        /*
+         * If hand is gone, then we want to start new measurement.
+         */
+        startNewDetectionAnalysis();
+    }
+
+    private void startNewDetectionAnalysis()
+    {
+        gesture_confidences = new ArrayList();
+        fileName = "C:\\Work\\Florence\\Experiments\\experiment_" + action_gesture_to_test.ToString() + "_" + DateTimeOffset.Now.ToUnixTimeSeconds() + ".txt";
+        start_stop_counter = 0;
     }
 
     /**
@@ -296,19 +452,19 @@ public class GestureAction : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        UnityEngine.Debug.Log("TRIG ENTER");
+        //UnityEngine.Debug.Log("TRIG ENTER");
     }
 
     void OnTriggerExit(Collider other)
     {
-        UnityEngine.Debug.Log("TRIG EXIT");
+        //UnityEngine.Debug.Log("TRIG EXIT");
         //if (other.GetComponent<Rigidbody>() != target) return;
         //if (state == 1) exit = true;
     }
 
     public void OnStateChanged(int state)
     {
-        UnityEngine.Debug.Log("OK detected");
+        //UnityEngine.Debug.Log("OK detected");
         /*        if (GestureProvider.LeftHand != null && GestureProvider.LeftHand.gesture == GestureType.Like)
                 {
                     txtCoord.text = GestureProvider.LeftHand.position.x + " # " + GestureProvider.LeftHand.position.y + " # " + GestureProvider.LeftHand.position.z;
@@ -317,7 +473,7 @@ public class GestureAction : MonoBehaviour
 
     public void OnTargetDetected()
     {
-        UnityEngine.Debug.Log("TARGET detected");
+        //UnityEngine.Debug.Log("TARGET detected");
         /*        if (GestureProvider.LeftHand != null && GestureProvider.LeftHand.gesture == GestureType.Like)
                 {
                     txtCoord.text = GestureProvider.LeftHand.position.x + " # " + GestureProvider.LeftHand.position.y + " # " + GestureProvider.LeftHand.position.z;
@@ -326,7 +482,7 @@ public class GestureAction : MonoBehaviour
 
     public void OnTargetReleased()
     {
-        UnityEngine.Debug.Log("TARGET RELEASED");
+        //UnityEngine.Debug.Log("TARGET RELEASED");
         /*        if (GestureProvider.LeftHand != null && GestureProvider.LeftHand.gesture == GestureType.Like)
                 {
                     txtCoord.text = GestureProvider.LeftHand.position.x + " # " + GestureProvider.LeftHand.position.y + " # " + GestureProvider.LeftHand.position.z;
