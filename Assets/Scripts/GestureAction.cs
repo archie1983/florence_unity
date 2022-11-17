@@ -63,7 +63,7 @@ public class GestureAction : MonoBehaviour
     private GestureType rotation_gesture = GestureType.Fist;
 
     // Gesture type for crawling and rotating in a continuous fashion. We only need one here.
-    private GestureType continuous_action_gesture = GestureType.Victory;
+    private GestureType continuous_action_gesture = GestureType.Point;
 
     private GestureType action_gesture_to_test = GestureType.Victory;
 
@@ -105,7 +105,6 @@ public class GestureAction : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        /*
         if (oper_style == OperationStyle.DISCRETE)
         {
             evaluateGestureForDiscreteOperation();
@@ -118,8 +117,8 @@ public class GestureAction : MonoBehaviour
         {
             evaluateGestureForContinuousPersistentOperation();
         }
-        */
-        logGestureReliability();
+
+        //logGestureReliability();
     }
 
     private void FixedUpdate()
@@ -341,8 +340,8 @@ public class GestureAction : MonoBehaviour
             //# y - hand up down
             //# z - hand left right
             //# x - hand forward back
-            userDraggedSidewaysDistance = fistStartPos.z - fistEndPos.z;
-            userDraggedForwardDistance = fistStartPos.x - fistEndPos.x;
+            userDraggedSidewaysDistance = fistStartPos.x - fistEndPos.x;
+            userDraggedForwardDistance = fistStartPos.z - fistEndPos.z;
 
             //# Ok, so now we have a user's command to move the robot. We also have an indication by how much we want to move it.
             //# We can now issue a Twist command, which is essentially the offsets detected.
@@ -352,7 +351,7 @@ public class GestureAction : MonoBehaviour
 
             continuous_move.angular.x = 0;
             continuous_move.angular.y = 0;
-            continuous_move.angular.z = userDraggedSidewaysDistance * -2.0; //# we will be rotating on Z axis at the speed requested by user. make negative because we're driving it back to front.
+            continuous_move.angular.z = userDraggedSidewaysDistance * 2.0; //# we will be rotating on Z axis at the speed requested by user. make negative because we're driving it back to front.
 
             UnityEngine.Debug.Log("CMove: " + continuous_move.linear.x + " " + continuous_move.angular.z);
 
